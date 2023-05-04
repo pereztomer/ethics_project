@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 import cv2
 from glob import glob
+import pandas as pd
 
 
 def build_effeintnet_b7():
@@ -50,7 +51,8 @@ def compare_images(im1, im2, model):
     f2 = np.squeeze(f2.numpy())
     l2_dist = np.linalg.norm(f1 - f2)
     cosine = np.dot(f1, f2) / (np.linalg.norm(f1) * np.linalg.norm(f2))
-    print(f"L2 norm: {l2_dist}, Cosine similarity: {cosine}")
+    # print(f"L2 norm: {l2_dist}, Cosine similarity: {cosine}")
+    return l2_dist, cosine
 
 
 def load_im(path):
@@ -65,18 +67,40 @@ def load_im(path):
 
 
 def main():
-    models = [build_resnet50(), build_effeintnet_b7()]
-    ds1 = glob('/home/user/PycharmProjects/ethics/paitings/**/*.jpg', recursive=True)
-    ds2 = glob('/home/user/PycharmProjects/ethics/paitings/**/*.jpg', recursive=True)
-    counter = 0
-    for model in models:
-        for val1 in ds1:
-            for val2 in ds2:
-                print(counter)
-                counter += 1
-                print(f'image 1: {val1}\nimage 2: {val2}')
+    models = {'resnet 50': build_resnet50(),
+              'efficientnet b7': build_effeintnet_b7()}
+    ds1 = glob('paitings/**/*.jpg', recursive=True)[:5]
+    ds2 = glob('paitings/**/*.jpg', recursive=True)[:5]
+    for model_name, model in models.items():
+        l2_scores_dict = {}
+        cosine_scores_dict = {}
+        for idx1, val1 in enumerate(ds1):
+            im1_name = val1.split('/')[-1].replace('.jpg', '')
+
+            # l2_scores_dict[idx1] = {}
+            # cosine_scores_dict[idx1] = {}
+
+            l2_scores_dict[im1_name] = {}
+            cosine_scores_dict[im1_name] = {}
+
+            for idx2, val2 in enumerate(ds2):
+                # print(f'image 1: {val1}\nimage 2: {val2}')
                 im1, im2 = load_im(val1), load_im(val2)
-                compare_images(im1, im2, model)
+                im2_name = val2.split('/')[-1].replace('.jpg', '')
+                l2_dist, cosine = compare_images(im1, im2, model)
+
+                # l2_scores_dict[idx1][idx2] = l2_dist
+                # cosine_scores_dict[idx1][idx2] = cosine
+
+                l2_scores_dict[im1_name][im2_name] = l2_dist
+                cosine_scores_dict[im1_name][im2_name] = cosine
+
+        df_l2 = pd.DataFrame.from_dict(l2_scores_dict)
+        df_cosine = pd.DataFrame.from_dict(cosine_scores_dict)
+        print(df_l2)
+        print(df_cosine)
+        df_l2.to_csv(f'{model_name}.l2', index=True)
+        df_cosine.to_csv(f'{model_name}.cosine', index=True)
 
 
 if __name__ == '__main__':
