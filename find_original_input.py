@@ -5,62 +5,55 @@ from PIL import Image
 import numpy as np
 import torchvision.datasets as datasets
 import torchvision
+import torchvision.transforms as transforms
 
 
 def train():
-    pil_im = Image.open("Bernese-Mountain-Dog-On-White-01.jpg")
+    import torch
+    import torchvision.models as models
+    import torchvision.transforms as transforms
 
-    # im_normalizer = torchvision.models.EfficientNet_B7_Weights.IMAGENET1K_V1.transforms()
-    # # Load a pre-trained model
-    # model = models.efficientnet_b7(pretrained=True)
-    # # that model variables can not be updated!
-    # model.eval()
-    #
-    # im_tensor = torch.unsqueeze(im_normalizer(pil_im), 0)
-    # class_number = np.argmax(model(im_tensor).detach().numpy())
+    # Check if GPU is available, otherwise use CPU
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
+    # Load a pre-trained VGG16 model and move it to the device
+    model = models.vgg16(pretrained=True)
+    model.to(device)
+    model.eval()
 
-    model = models.efficientnet_b0(pretrained=True)
+    # Define the target class (e.g. "dog")
+    target_class = 263
 
-    # Desired output
-    target_class = 239
+    # Generate a random noise image as the starting point and move it to the device
+    input_tensor = torch.randn((1, 3, 224, 224), requires_grad=True, device=device)
 
-    # Initialize the input variable - this is a variable - not a scalar!
-    input_size = (3, 224, 224)
-    input_var = torch.randn(1, *input_size, requires_grad=True)
+    # Set up the optimizer and criterion for backpropagation
+    optimizer = torch.optim.Adam([input_tensor], lr=0.1)
+    criterion = torch.nn.CrossEntropyLoss()
 
-    # Set up the optimizer
-    lr = 0.1
-    steps = 1000
-    opt = torch.optim.SGD([input_var], lr=lr)
-
-    # Perform backpropagation
-    for i in range(steps):
-        opt.zero_grad()
-
-        # Forward pass
-        logits = model(input_var)
-        loss = F.cross_entropy(logits, torch.tensor([target_class]))
-
-        # Backward pass
+    # Perform backpropagation to generate a new image that maximizes the target class
+    for i in range(1000):
+        optimizer.zero_grad()
+        output = model(input_tensor)
+        loss = criterion(output, torch.tensor([target_class], device=device))
         loss.backward()
-        opt.step()
+        optimizer.step()
 
-        # Print progress
-        if i % 100 == 0:
-            print('Step {}: Loss = {}'.format(i, loss.item()))
+        # Clamp the pixel values to the range [0, 1]
+        input_tensor.data.clamp_(0, 1)
 
-        # Clamp the input variable to a valid range
-        input_var.data = torch.clamp(input_var.data, -1, 1)
+    # Convert the tensor back to an image and un-normalize it
+    np_output = np.array(input_tensor.detach().cpu().squeeze())
+    mean = np.array([0.485, 0.456, 0.406])
+    std = np.array([0.229, 0.224, 0.225])
+    output_image = transforms.functional.to_pil_image(input_tensor.cpu().squeeze())
+    unnormalize = transforms.Normalize(mean=[-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.225],
+                                       std=[1 / 0.229, 1 / 0.224, 1 / 0.225])
+    output_image = transforms.functional.to_pil_image(unnormalize(input_tensor.cpu().squeeze()))
 
-    # Convert the input variable to a PIL image
-    input_np = input_var.detach().numpy()[0]
-    input_np = np.transpose(input_np, (1, 2, 0))
-    input_np = (input_np + 1) / 2 * 255
-    input_np = np.clip(input_np, 0, 255).astype(np.uint8)
-    input_img = Image.fromarray(input_np)
-
-    # Save the image
-    input_img.save('targeted_image.png')
+    # Save or display the generated image
+    output_image.save('generated_image.jpg')
+    output_image.show()
 
 
 if __name__ == '__main__':
