@@ -34,6 +34,7 @@ def build_resnet50():
     x = resnet50_feature_extractor(resizing_layer)
     x = tf.keras.layers.GlobalAveragePooling2D()(x)
     model = tf.keras.Model(inputs=input_layer, outputs=x)
+
     # model.summary()
     return model
 
@@ -69,8 +70,8 @@ def load_im(path):
 def main():
     models = {'resnet 50': build_resnet50(),
               'efficientnet b7': build_effeintnet_b7()}
-    ds1 = glob('paitings/**/*.jpg', recursive=True)[:5]
-    ds2 = glob('paitings/**/*.jpg', recursive=True)[:5]
+    ds1 = glob('paitings/**/*.jpg', recursive=True)[:30]
+    ds2 = glob('paitings/**/*.jpg', recursive=True)[:30]
     for model_name, model in models.items():
         l2_scores_dict = {}
         cosine_scores_dict = {}
@@ -100,7 +101,7 @@ def main():
         print(df_l2)
         print(df_cosine)
         df_l2.to_csv(f'{model_name}.l2', index=True)
-        df_cosine.to_csv(f'{model_name}.cosine', index=True)
+        df_cosine.to_csv(f'{model_name}.cosine.csv', index=True)
 
 
 if __name__ == '__main__':
