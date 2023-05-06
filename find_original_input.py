@@ -38,7 +38,6 @@ def train():
         loss = criterion(output, torch.tensor([target_class], device=device))
         loss.backward()
         optimizer.step()
-
         # Clamp the pixel values to the range [0, 1]
         input_tensor.data.clamp_(0, 1)
 
