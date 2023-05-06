@@ -1,18 +1,10 @@
-import torch
-import torch.nn.functional as F
-import torchvision.models as models
-from PIL import Image
 import numpy as np
-import torchvision.datasets as datasets
-import torchvision
+import torch
+import torchvision.models as models
 import torchvision.transforms as transforms
 
 
 def train():
-    import torch
-    import torchvision.models as models
-    import torchvision.transforms as transforms
-
     # Check if GPU is available, otherwise use CPU
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
